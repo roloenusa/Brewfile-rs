@@ -1,5 +1,7 @@
 use logos::{Lexer, Logos};
 
+mod meta;
+
 #[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\f]+")] // Ignore this regex pattern between tokensj
 enum Token {
@@ -119,12 +121,17 @@ fn parse_lexer(text: &str) {
 
 fn main() {
     let text = String::from(r#"
+        ## Other text that doesn't have stuff
+        ## @required
+        ## @description hello world
+        ## Other text that doesn't have mooooore stuff
         brew "asdf", args: ["hello", "world"]
         brew "node" #, args: ["world"]
         brew "neovim" #, args: ["foo"]
      "#);
 
-    parse_lexer(text.as_str());
+    // parse_lexer(text.as_str());
+    meta::parse_meta(text.as_str());
     println!("End of file");
 }
 
