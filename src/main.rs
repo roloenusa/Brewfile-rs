@@ -4,35 +4,22 @@ use nom::bytes::complete::tag;
 use nom::branch::alt;
 use nom::IResult;
 
-fn parse_input(input: &str) -> IResult<&str, &str> {
+fn parse_abc(input: &str) -> IResult<&str, &str> {
     tag("abc")(input)
 }
 
-fn parse_abc_or_def(input: &str) -> IResult<&str, &str> {
+fn parse_def_or_ghi(input: &str) -> IResult<&str, &str> {
     alt((
-        tag("abc"),
-        tag("def")
+        tag("def"),
+        tag("ghi")
     ))(input)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let (leftover_input, output) = parse_input("abcWorld")?;
-    assert_eq!(leftover_input, "World");
-    assert_eq!(output, "abc");
-
-    assert!(parse_input("defWorld").is_err());
-
-
-    // Alt combinator
-    let (leftover_input, output) = parse_abc_or_def("abcWorld")?;
-    assert_eq!(leftover_input, "World");
-    assert_eq!(output, "abc");
-
-    let (leftover_input, output) = parse_abc_or_def("defWorld")?;
-    assert_eq!(leftover_input, "World");
-    assert_eq!(output, "def");
-
-    assert!(parse_abc_or_def("ghiWorld").is_err());
+    let input = "abcghi";
+    let (remainder, abc) = parse_abc(input)?;
+    let (remainder, def_or_ghi) = parse_def_or_ghi(remainder)?;
+    println!("first parsed: {abc}; then parsed: {def_or_ghi}");
 
     Ok(())
 }
