@@ -12,16 +12,23 @@ pub struct Coordinate {
 }
 
 // 1. Nom has an in-built i32 parser.
-use nom::character::complete::i32;
+use nom::character::complete::{i32, space0};
 
 // 2. Use the `separated_pair` parser to combine two parsers (in this case,
 //    both `i32`), ignoring something in-between.
 fn parse_integer_pair(input: &str) -> IResult<&str, (i32, i32)> {
     separated_pair(
         i32,
-        tag(", "),
+        // tag(", "),
+        parse_delimiter,
         i32
     )(input)
+}
+
+fn parse_delimiter(input: &str) -> IResult<&str, &str> {
+    let (remaining, _blank) = space0(input)?;
+    let (remaining, _comma) = tag(",")(remaining)?;
+    space0(remaining)
 }
 
 // 3. Use the `delimited` parser to apply a parser, ignoring the results
@@ -43,6 +50,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(parsed, Coordinate {x: 3, y: 5});
 
     let (_, parsed) = parse_coordinate("(2, -4)")?;
+    assert_eq!(parsed, Coordinate {x: 2, y: -4});
+
+    let (_, parsed) = parse_coordinate("(2    ,     -4)")?;
     assert_eq!(parsed, Coordinate {x: 2, y: -4});
 
     let parsing_error = parse_coordinate("(3,)");
