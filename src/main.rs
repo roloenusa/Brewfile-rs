@@ -1,20 +1,17 @@
 use std::error::Error;
 
-use nom::bytes::complete::{take_until, take_while};
-use nom::sequence::terminated;
+use nom::bytes::complete::tag;
+use nom::multi::many0;
 use nom::IResult;
 
-fn parse_sentence(input: &str) -> IResult<&str, &str> {
-    terminated(take_until("."), take_while(|c| c == '.' || c == ' '))(input)
+fn parse(input: &str) -> IResult<&str, Vec<&str>> {
+   many0(tag("abc"))(input)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let (remaining, parsed) = parse_sentence("I am Tom. I write Rust")?;
-    assert_eq!(parsed, "I am Tom");
-    assert_eq!(remaining, "I write Rust");
-
-    let parser_error = parse_sentence("Not a sentence (no period at the end)");
-    assert!(parser_error.is_err());
+    assert_eq!(parse("abcabc"), Ok(("", vec!["abc", "abc"])));
+    assert_eq!(parse("abc123"), Ok(("123", vec!["abc"])));
+    assert_eq!(parse("123123"), Ok(("123123", vec![])));
 
     Ok(())
 }
