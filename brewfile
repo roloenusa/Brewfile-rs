@@ -1,2 +1,4 @@
+brew "asdf"
 brew "nodejs"
+brew
 
