@@ -57,14 +57,22 @@ fn string<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 }
 
 fn parse_command(input: &str) -> IResult<&str, Command>{
-    let (remainder, _brew_command) = tag("brew")(input)?;
+    // Commands should always be followed by a space
+    let (remainder, _brew_command) = terminated(tag("brew"), space0)(input)?;
 
-    match preceded(space0, string::<()>)(remainder) {
-        Ok((remainder, target)) =>  {
-            Ok((remainder, Command::Brew(target.to_string())))
-        },
-        Err(e) => panic!("Error parsing {:#?}", e),
-    }
+    // Parse the target for the command
+    let (remainder, target) = string::<()>(remainder).unwrap();
+
+    // See if there is anything to capture.
+    let (remainder, spacer) = tuple((space0, tag(","), space0))(remainder)?;
+    println!("----- spacer, {:#?}", spacer);
+
+    let (remainder, string2) = string::<()>(remainder).unwrap();
+
+    println!("remainder: {}", remainder);
+    println!("second string: {}", string2);
+
+    Ok((remainder, Command::Brew(String::from(target))))
 }
 
 fn parse_line(input: &str) -> IResult<&str, Command> {
@@ -86,7 +94,7 @@ fn main() {
 
     println!("{}", src);
 
-    let (_remainder, result) = parse_input(&src).unwrap();
+    let result = parse_input(&src).unwrap();
     println!("{:#?}", result);
 
     // match &result[0] {
