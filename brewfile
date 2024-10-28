@@ -1,4 +1,3 @@
-brew "asdf"
+brew "a \"hello\"sdf \n this is a test\n\tfor this thing"
 brew "nodejs"
-brew
 
