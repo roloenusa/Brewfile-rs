@@ -1,3 +1,4 @@
+mod string_parser;
 
 use nom::branch::alt;
 use nom::bytes::complete::{escaped, escaped_transform, is_not, take_while_m_n};
@@ -6,73 +7,61 @@ use nom::character::streaming::{char, multispace1};
 use nom::bytes::complete::tag;
 use nom::combinator::{cut, map, map_opt, map_res, rest, value, verify};
 use nom::error::{context, ContextError, FromExternalError, ParseError};
-use nom::multi::{fold_many0, many0};
+use nom::multi::{fold_many0, many0, separated_list0};
 use nom::sequence::{delimited, preceded, terminated, tuple};
 use nom::{IResult, Parser};
+use string_parser::string;
 
 #[derive(Debug)]
-enum Command {
-    Brew(String),
+enum Command<'a> {
+    Brew(Brew<'a>),
 }
 
-/// A nom parser has the following signature:
-/// `Input -> IResult<Input, Output, Error>`, with `IResult` defined as:
-/// `type IResult<I, O, E = (I, ErrorKind)> = Result<(I, O), Err<E>>;`
-///
-/// most of the times you can ignore the error type and use the default (but this
-/// examples shows custom error types later on!)
-///
-/// Here we use `&str` as input type, but nom parsers can be generic over
-/// the input type, and work directly with `&[u8]` or any other type that
-/// implements the required traits.
-///
-/// Finally, we can see here that the input and output type are both `&str`
-/// with the same lifetime tag. This means that the produced value is a subslice
-/// of the input data. and there is no allocation needed. This is the main idea
-/// behind nom's performance.
-fn parse_str<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    // escaped(alt((alphanumeric1, space0)), '\\', one_of("\"n\\"))(i)
-    escaped(is_not("\\\""), '\\', one_of("\"nt\\"))(i)
+#[derive(Debug, Clone)]
+struct Brew<'a> {
+    command: &'a str,
+    args: Vec<&'a str>,
 }
 
-/// this parser combines the previous `parse_str` parser, that recognizes the
-/// interior of a string, with a parse to recognize the double quote character,
-/// before the string (using `preceded`) and after the string (using `terminated`).
-///
-/// `context` and `cut` are related to error management:
-/// - `cut` transforms an `Err::Error(e)` in `Err::Failure(e)`, signaling to
-/// combinators like  `alt` that they should not try other parsers. We were in the
-/// right branch (since we found the `"` character) but encountered an error when
-/// parsing the string
-/// - `context` lets you add a static string to provide more information in the
-/// error chain (to indicate which parser had an error)
-fn string<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
-  input: &'a str,
-) -> IResult<&'a str, &'a str, E> {
-  context(
-    "string",
-    preceded(char('\"'), cut(terminated(parse_str, char('\"')))),
-  )
-  .parse(input)
+fn parse_list(input: &str) -> IResult<&str, Vec<&str>> {
+    delimited(
+        terminated(tag("["), space0),
+        separated_list0(tuple((space0, tag(","), space0)), string),
+        preceded(space0, tag("]")),
+    )(input)
+}
+
+fn parse_brew(input: &str) -> IResult<&str, Brew> {
+    let (remainder, target) = string::<()>(input).unwrap();
+    let (remainder, _) = tuple((space0, tag(","), space0))(remainder)?;
+
+    // Grab the parameter, ignore white spaces after.
+    let (remainder, _param) = terminated(tag("args"), tag(":"))(remainder)?;
+    let (remainder, _) = space0(remainder)?;
+
+    // Parse the list of arguments
+    let (remainder, list) = parse_list(remainder)?;
+
+    // Build the object we need to return
+    let brew = Brew {
+        command: target,
+        args: list,
+    };
+
+    Ok((remainder, brew))
 }
 
 fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
     let (remainder, _brew_command) = terminated(tag("brew"), space0)(input)?;
 
-    // Parse the target for the command
-    let (remainder, target) = string::<()>(remainder).unwrap();
-
-    // See if there is anything to capture.
-    let (remainder, spacer) = tuple((space0, tag(","), space0))(remainder)?;
-    println!("----- spacer, {:#?}", spacer);
-
-    let (remainder, string2) = string::<()>(remainder).unwrap();
-
-    println!("remainder: {}", remainder);
-    println!("second string: {}", string2);
-
-    Ok((remainder, Command::Brew(String::from(target))))
+    match _brew_command {
+        "brew" => {
+            let (remainder, brew) = parse_brew(remainder)?;
+            Ok((remainder, Command::Brew(brew)))
+        }
+        _ => panic!("stuff"),
+    }
 }
 
 fn parse_line(input: &str) -> IResult<&str, Command> {
@@ -96,12 +85,5 @@ fn main() {
 
     let result = parse_input(&src).unwrap();
     println!("{:#?}", result);
-
-    // match &result[0] {
-    //     Command::Brew(text) => println!("---- text: {}", text),
-    //     _ => panic!("wtf"),
-    // }
-    // println!("Result: {}", result[0]);
-    // println!("Remainder: {}", remainder);
 }
 
