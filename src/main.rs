@@ -40,8 +40,7 @@ fn is_last(input: &str) -> IResult<&str, bool> {
 }
 
 fn parse_spacer(input: &str) -> IResult<&str, &str> {
-    let (remainder, comma) = preceded(space0, terminated(tag(","), space0))(input)?;
-    Ok((remainder, comma))
+    preceded(space0, terminated(tag(","), space0))(input)
 }
 
 fn parse_list(input: &str) -> IResult<&str, Vec<&str>> {
@@ -101,7 +100,7 @@ fn parse_brew(input: &str) -> IResult<&str, Brew> {
 fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
     let (remainder, _brew_command) = terminated(
-        alt((tag("brew"), tag("tap"))),
+        alphanumeric1,
         space0)
         .parse(input)?;
 
@@ -114,7 +113,7 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
             let (remainder, brew) = parse_brew(remainder)?;
             Ok((remainder, Command::Brew(brew)))
         }
-        _ => panic!("stuff"),
+        unknown => panic!("Unknown command: {unknown}"),
     }
 }
 
