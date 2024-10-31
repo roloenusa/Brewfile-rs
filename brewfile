@@ -1,3 +1,6 @@
 brew "asdf", args: [ "hello", "world" ]
-brew "nodejs", args: ["test"]
+brew "nodejs"
+
+tap "Hello", "world"
+tap "single"
 
