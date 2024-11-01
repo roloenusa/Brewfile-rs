@@ -1,5 +1,5 @@
 brew "asdf", args: [ "hello", "world" ]
-brew "nodejs", args: { "test": "234", "test2": "987" }
+brew "nodejs", args: { "test": "234", "test2": "987" }, link: ["1", "2" ]
 
 tap "Hello", "world"
 tap "single"

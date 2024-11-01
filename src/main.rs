@@ -1,5 +1,7 @@
 mod string_parser;
 
+use std::collections::HashMap;
+
 use nom::branch::alt;
 use nom::bytes::complete::{escaped, escaped_transform, is_not, take_while_m_n};
 use nom::character::complete::{alpha1, alphanumeric1, line_ending, multispace0, one_of, space0};
@@ -28,8 +30,18 @@ struct Tap<'a> {
 #[derive(Debug, Clone)]
 struct Brew<'a> {
     command: &'a str,
-    args: Vec<&'a str>,
+    // args: Vec<&'a str>,
+    params: HashMap<&'a str, Param<'a>>,
 }
+
+#[derive(Debug, Clone)]
+enum Param<'a> {
+    String(&'a str),
+    Boolean(bool),
+    Map(Vec<(&'a str, &'a str)>),
+    List(Vec<&'a str>),
+}
+
 
 fn is_last(input: &str) -> IResult<&str, bool> {
     let (remainder, comma) = alt((parse_spacer, multispace0))(input)?;
@@ -43,12 +55,14 @@ fn parse_spacer(input: &str) -> IResult<&str, &str> {
     preceded(space0, terminated(tag(","), space0))(input)
 }
 
-fn parse_list(input: &str) -> IResult<&str, Vec<&str>> {
-    delimited(
+fn parse_list(input: &str) -> IResult<&str, Param> {
+    let (remainder, list) = delimited(
         terminated(tag("["), space0),
         separated_list0(parse_spacer, string),
         preceded(space0, tag("]")),
-    )(input)
+    )(input)?;
+
+    Ok((remainder, Param::List(list)))
 }
 
 fn key_value(input: &str) -> IResult<&str, (&str, &str)> {
@@ -59,20 +73,37 @@ fn key_value(input: &str) -> IResult<&str, (&str, &str)> {
     )(input)
 }
 
-fn parse_object(input: &str) -> IResult<&str, Vec<&str>> {
-    let (remainder, result) = delimited(
+fn parse_object(input: &str) -> IResult<&str, Param> {
+    let (remainder, pairs) = delimited(
         terminated(tag("{"), space0),
         separated_list0(parse_spacer, key_value),
         preceded(space0, tag("}")),
     )(input)?;
+    Ok((remainder, Param::Map(pairs)))
+}
 
-    let mut r: Vec<&str> = Vec::new();
-    for (a, b) in result {
-        r.push(a);
-        r.push(b);
-    }
+fn parse_param(input: &str) -> IResult<&str, (&str, Param)> {
+    let (remainder, key) = terminated(alpha1, terminated(tag(":"), space0))(input)?;
+    let (remainder, value) = match key {
+        "args" | "link" => alt((parse_object, parse_list))(remainder),
+        unknown => panic!("Unknonw parameter {unknown}"),
+    }?;
 
-    Ok((remainder, r))
+    Ok((remainder, (key, value)))
+}
+
+fn parse_params(input: &str) -> IResult<&str, HashMap<&str, Param>> {
+    let (remainder, values) = separated_list0(
+        terminated(tag(","), space0),
+        parse_param
+    )(input)?;
+
+    let mut params: HashMap<&str, Param> = HashMap::new();
+    for (key, value) in values {
+        params.insert(key, value);
+    };
+
+    Ok((remainder, params))
 }
 
 fn parse_tap(input: &str) -> IResult<&str, Tap> {
@@ -97,26 +128,33 @@ fn parse_brew(input: &str) -> IResult<&str, Brew> {
         // Build the object we need to return
         let brew = Brew {
             command: target,
-            args: Vec::new()
+            // args: Vec::new()
+            params: HashMap::new(),
         };
 
         return Ok((remainder, brew))
     }
 
-    // Grab the parameter, ignore white spaces after.
-    let (remainder, _param) = terminated(tag("args"), tag(":"))(remainder)?;
-    let (remainder, _) = space0(remainder)?;
+    let (remainder, values) = parse_params(remainder)?;
 
-    // Parse the list of arguments
-    let (remainder, list) = alt((
-        parse_object,
-        parse_list,
-    ))(remainder)?;
+
+
+    // // Grab the parameter, ignore white spaces after.
+    // let (remainder, _param) = terminated(tag("args"), tag(":"))(remainder)?;
+    // let (remainder, _) = space0(remainder)?;
+    //
+    // // Parse the list of arguments
+    // let (remainder, list) = alt((
+    //     parse_object,
+    //     parse_list,
+    // ))(remainder)?;
 
     // Build the object we need to return
     let brew = Brew {
         command: target,
-        args: list,
+        // args: list,
+        // args: Vec::new(),
+        params: values
     };
 
     Ok((remainder, brew))
@@ -126,8 +164,9 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
     let (remainder, _brew_command) = terminated(
         alphanumeric1,
-        space0)
-        .parse(input)?;
+        space0
+    )
+    .parse(input)?;
 
     match _brew_command {
         "tap" => {
@@ -138,7 +177,7 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
             let (remainder, brew) = parse_brew(remainder)?;
             Ok((remainder, Command::Brew(brew)))
         }
-        unknown => panic!("Unknown command: {unknown}"),
+        unknown => panic!("Unknown command: {unknown} - {remainder}"),
     }
 }
 
