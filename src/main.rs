@@ -85,7 +85,11 @@ fn parse_object(input: &str) -> IResult<&str, Param> {
 fn parse_param(input: &str) -> IResult<&str, (&str, Param)> {
     let (remainder, key) = terminated(alpha1, terminated(tag(":"), space0))(input)?;
     let (remainder, value) = match key {
-        "args" | "link" => alt((parse_object, parse_list))(remainder),
+        "args" => alt((parse_object, parse_list))(remainder),
+        "link" => alt((
+            value(Param::Boolean(true), tag("true")),
+            value(Param::String("override"), tag(":override"))
+        ))(remainder),
         unknown => panic!("Unknonw parameter {unknown}"),
     }?;
 
@@ -137,23 +141,9 @@ fn parse_brew(input: &str) -> IResult<&str, Brew> {
 
     let (remainder, values) = parse_params(remainder)?;
 
-
-
-    // // Grab the parameter, ignore white spaces after.
-    // let (remainder, _param) = terminated(tag("args"), tag(":"))(remainder)?;
-    // let (remainder, _) = space0(remainder)?;
-    //
-    // // Parse the list of arguments
-    // let (remainder, list) = alt((
-    //     parse_object,
-    //     parse_list,
-    // ))(remainder)?;
-
     // Build the object we need to return
     let brew = Brew {
         command: target,
-        // args: list,
-        // args: Vec::new(),
         params: values
     };
 

@@ -1,6 +1,7 @@
-brew "asdf", args: [ "hello", "world" ]
-brew "nodejs", args: { "test": "234", "test2": "987" }, link: ["1", "2" ]
+brew "asdf", args: [ "hello", "world" ], link: :override
+brew "nodejs", args: { "test": "234", "test2": "987" }, link: true
 
 tap "Hello", "world"
+
 tap "single"
 
