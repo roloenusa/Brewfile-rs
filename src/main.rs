@@ -1,19 +1,18 @@
 mod string_parser;
+mod parsers;
 
 use std::collections::HashMap;
 
 use nom::branch::alt;
-use nom::bytes::complete::{escaped, escaped_transform, is_not, take_while_m_n};
-use nom::character::complete::{alpha1, alphanumeric1, line_ending, multispace0, one_of, space0};
-use nom::character::streaming::{char, multispace1};
+use nom::character::complete::{alpha1, alphanumeric1, multispace0, space0};
 use nom::bytes::complete::tag;
-use nom::combinator::{cut, map, map_opt, map_res, peek, rest, value, verify};
-use nom::complete::take;
-use nom::error::{context, ContextError, FromExternalError, ParseError};
-use nom::multi::{fold_many0, many0, separated_list0};
-use nom::sequence::{delimited, preceded, separated_pair, terminated, tuple};
+use nom::combinator::value;
+use nom::multi::{many0, separated_list0};
+use nom::sequence::{delimited, terminated};
 use nom::{IResult, Parser};
+
 use string_parser::string;
+use parsers::*;
 
 #[derive(Debug)]
 enum Command<'a> {
@@ -32,54 +31,6 @@ struct Brew<'a> {
     command: &'a str,
     // args: Vec<&'a str>,
     params: HashMap<&'a str, Param<'a>>,
-}
-
-#[derive(Debug, Clone)]
-enum Param<'a> {
-    String(&'a str),
-    Boolean(bool),
-    Map(Vec<(&'a str, &'a str)>),
-    List(Vec<&'a str>),
-}
-
-
-fn is_last(input: &str) -> IResult<&str, bool> {
-    let (remainder, comma) = alt((parse_spacer, multispace0))(input)?;
-    match comma {
-        "," => Ok((remainder, false)),
-        _ => Ok((remainder, true)),
-    }
-}
-
-fn parse_spacer(input: &str) -> IResult<&str, &str> {
-    preceded(space0, terminated(tag(","), space0))(input)
-}
-
-fn parse_list(input: &str) -> IResult<&str, Param> {
-    let (remainder, list) = delimited(
-        terminated(tag("["), space0),
-        separated_list0(parse_spacer, string),
-        preceded(space0, tag("]")),
-    )(input)?;
-
-    Ok((remainder, Param::List(list)))
-}
-
-fn key_value(input: &str) -> IResult<&str, (&str, &str)> {
-    separated_pair(
-        string,
-        terminated(tag(":"), space0),
-        string
-    )(input)
-}
-
-fn parse_object(input: &str) -> IResult<&str, Param> {
-    let (remainder, pairs) = delimited(
-        terminated(tag("{"), space0),
-        separated_list0(parse_spacer, key_value),
-        preceded(space0, tag("}")),
-    )(input)?;
-    Ok((remainder, Param::Map(pairs)))
 }
 
 fn parse_param(input: &str) -> IResult<&str, (&str, Param)> {
@@ -152,13 +103,13 @@ fn parse_brew(input: &str) -> IResult<&str, Brew> {
 
 fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
-    let (remainder, _brew_command) = terminated(
+    let (remainder, command) = terminated(
         alphanumeric1,
         space0
     )
     .parse(input)?;
 
-    match _brew_command {
+    match command {
         "tap" => {
             let (remainder, tap) = parse_tap(remainder)?;
             Ok((remainder, Command::Tap(tap)))

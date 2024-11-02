@@ -1,12 +1,9 @@
-use nom::branch::alt;
-use nom::bytes::complete::{escaped, escaped_transform, is_not, take_while_m_n};
-use nom::character::complete::{alphanumeric1, line_ending, multispace0, one_of, space0};
-use nom::character::streaming::{char, multispace1};
-use nom::bytes::complete::tag;
-use nom::combinator::{cut, map, map_opt, map_res, rest, value, verify};
-use nom::error::{context, ContextError, FromExternalError, ParseError};
-use nom::multi::{fold_many0, many0, separated_list0};
-use nom::sequence::{delimited, preceded, terminated, tuple};
+use nom::bytes::complete::{escaped, is_not};
+use nom::character::complete::one_of;
+use nom::character::streaming::char;
+use nom::combinator::cut;
+use nom::error::{context, ContextError, ParseError};
+use nom::sequence::{preceded, terminated};
 use nom::{IResult, Parser};
 
 /// A nom parser has the following signature:
