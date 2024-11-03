@@ -1,5 +1,6 @@
 mod string_parser;
 mod parsers;
+mod brew_command;
 
 use std::collections::HashMap;
 
