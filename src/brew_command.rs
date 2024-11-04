@@ -14,7 +14,7 @@ pub struct BrewCommand<'a> {
     link: LinkOptions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LinkOptions {
     None,
     On,
@@ -41,7 +41,7 @@ impl<'a> BrewCommand<'a> {
 
         // Loop over all the parameters and update as needed
         while !last {
-            let (remainder, key) = terminated(alpha1, terminated(tag(":"), space0))(result_remainder)?;
+            let (remainder, key) = terminated(alt((tag("args"), tag("link"))), terminated(tag(":"), space0))(result_remainder)?;
             let remainder = match key {
                 "args" => {
                     let (remainder, value) = alt((parse_object, parse_list))(remainder)?;
@@ -56,7 +56,7 @@ impl<'a> BrewCommand<'a> {
                     brew.link = value;
                     remainder
                 },
-                unknown => panic!("Unknonw parameter {unknown}"),
+                unknown => panic!("Unknown parameter {unknown}"),
             };
 
             let (remainder, check) = is_last(remainder)?;
@@ -74,12 +74,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-
-    #[test]
     fn parse_line() {
         let (remainder, brew) = BrewCommand::parse("\"target\" \n").unwrap();
         assert_eq!(brew.target, "target");
@@ -89,41 +83,56 @@ mod tests {
         let (remainder, brew) = BrewCommand::parse("\"target\" \nextra").unwrap();
         assert_eq!(brew.target, "target");
         assert_eq!(remainder, "extra");
+
+        // Returns an error when following invalid input
+        let res = BrewCommand::parse("\"target\", invalid: true\nextra");
+        match res {
+            Err(nom::Err::Error(err)) => {
+                assert_eq!(err.to_string(), "error Tag at: invalid: true\nextra"); // Checking the remaining input
+            }
+            _ => panic!("Expected an error but got: {:?}", res),
+        }
     }
 
     #[test]
     fn parse_args() {
         let (remainder, brew) = BrewCommand::parse("\"target\", args: [\"hello\", \"world\"]\n").unwrap();
-        match brew.args {
-            Param::List(list) => assert_eq!(list, vec!["hello", "world"]),
-            _ => assert!(false, "expected a list of params"),
-        };
+        assert_eq!(brew.args, Param::List(vec!["hello", "world"]));
         assert_eq!(remainder, "");
 
         let (remainder, brew) = BrewCommand::parse("\"target\", args: {\"hello\": \"world\"}\n").unwrap();
-        match brew.args {
-            Param::Map(list) => assert_eq!(list, vec![("hello", "world")]),
-            _ => assert!(false, "expected a map of params"),
-        };
+        assert_eq!(brew.args, Param::Map(vec![("hello", "world")]));
         assert_eq!(remainder, "");
+
+        // Should only accept maps or lists
+        let res = BrewCommand::parse("\"target\", args: hello\n");
+        match res {
+            Err(nom::Err::Error(err)) => {
+                assert_eq!(err.to_string(), "error Tag at: hello\n"); // Checking the remaining input
+            }
+            _ => panic!("Expected an error but got: {:?}", res),
+        }
+
+        // Should fail on dangling args
+        let res = BrewCommand::parse("\"target\", args: \n");
+        match res {
+            Err(nom::Err::Error(err)) => {
+                assert_eq!(err.to_string(), "error Tag at: \n"); // Checking the remaining input
+            }
+            _ => panic!("Expected an error but got: {:?}", res),
+        }
     }
 
     #[test]
     fn parse_link() {
         let (remainder, brew) = BrewCommand::parse("\"target\", link: true \n").unwrap();
         assert_eq!(brew.target, "target");
-        match brew.link {
-            LinkOptions::On => assert!(true),
-            _ => assert!(false, "expected LinkOptions::On"),
-        };
+        assert_eq!(brew.link, LinkOptions::On);
         assert_eq!(remainder, "");
 
         let (remainder, brew) = BrewCommand::parse("\"target\", link: :override").unwrap();
         assert_eq!(brew.target, "target");
-        match brew.link {
-            LinkOptions::Override => assert!(true),
-            _ => assert!(false, "expected LinkOptions::On"),
-        };
+        assert_eq!(brew.link, LinkOptions::Override);
         assert_eq!(remainder, "");
     }
 

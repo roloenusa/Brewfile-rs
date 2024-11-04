@@ -8,7 +8,7 @@ use string_parser::string;
 
 use crate::string_parser;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Param<'a> {
     String(&'a str),
     Boolean(bool),
