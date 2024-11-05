@@ -2,13 +2,8 @@ mod string_parser;
 mod parsers;
 mod brew_command;
 
-use std::collections::HashMap;
-
-use nom::branch::alt;
-use nom::character::complete::{alpha1, alphanumeric1, multispace0, space0};
-use nom::bytes::complete::tag;
-use nom::combinator::value;
-use nom::multi::{many0, separated_list0};
+use nom::character::complete::{alphanumeric1, multispace0, space0};
+use nom::multi::many0;
 use nom::sequence::{delimited, terminated};
 use nom::{IResult, Parser};
 
@@ -17,7 +12,7 @@ use parsers::*;
 
 #[derive(Debug)]
 enum Command<'a> {
-    Brew(Brew<'a>),
+    Brew(brew_command::BrewCommand<'a>),
     Tap(Tap<'a>),
 }
 
@@ -25,41 +20,6 @@ enum Command<'a> {
 struct Tap<'a> {
     user_repo: &'a str,
     url: Option<&'a str>,
-}
-
-#[derive(Debug, Clone)]
-struct Brew<'a> {
-    command: &'a str,
-    // args: Vec<&'a str>,
-    params: HashMap<&'a str, Param<'a>>,
-}
-
-fn parse_param(input: &str) -> IResult<&str, (&str, Param)> {
-    let (remainder, key) = terminated(alpha1, terminated(tag(":"), space0))(input)?;
-    let (remainder, value) = match key {
-        "args" => alt((parse_object, parse_list))(remainder),
-        "link" => alt((
-            value(Param::Boolean(true), tag("true")),
-            value(Param::String("override"), tag(":override"))
-        ))(remainder),
-        unknown => panic!("Unknonw parameter {unknown}"),
-    }?;
-
-    Ok((remainder, (key, value)))
-}
-
-fn parse_params(input: &str) -> IResult<&str, HashMap<&str, Param>> {
-    let (remainder, values) = separated_list0(
-        terminated(tag(","), space0),
-        parse_param
-    )(input)?;
-
-    let mut params: HashMap<&str, Param> = HashMap::new();
-    for (key, value) in values {
-        params.insert(key, value);
-    };
-
-    Ok((remainder, params))
 }
 
 fn parse_tap(input: &str) -> IResult<&str, Tap> {
@@ -76,32 +36,6 @@ fn parse_tap(input: &str) -> IResult<&str, Tap> {
     Ok((remainder, Tap { user_repo, url: Some(url) }))
 }
 
-fn parse_brew(input: &str) -> IResult<&str, Brew> {
-    let (remainder, target) = string::<()>(input).unwrap();
-    let (remainder, result) = is_last(remainder)?;
-
-    if result {
-        // Build the object we need to return
-        let brew = Brew {
-            command: target,
-            // args: Vec::new()
-            params: HashMap::new(),
-        };
-
-        return Ok((remainder, brew))
-    }
-
-    let (remainder, values) = parse_params(remainder)?;
-
-    // Build the object we need to return
-    let brew = Brew {
-        command: target,
-        params: values
-    };
-
-    Ok((remainder, brew))
-}
-
 fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
     let (remainder, command) = terminated(
@@ -116,7 +50,7 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
             Ok((remainder, Command::Tap(tap)))
         }
         "brew" => {
-            let (remainder, brew) = parse_brew(remainder)?;
+            let (remainder, brew) = brew_command::BrewCommand::parse(remainder)?;
             Ok((remainder, Command::Brew(brew)))
         }
         unknown => panic!("Unknown command: {unknown} - {remainder}"),

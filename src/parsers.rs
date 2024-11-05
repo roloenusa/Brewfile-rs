@@ -38,6 +38,14 @@ pub fn parse_list(input: &str) -> IResult<&str, Param> {
     Ok((remainder, Param::List(list)))
 }
 
+pub fn parse_list2(input: &str) -> IResult<&str, Vec<&str>> {
+    delimited(
+        terminated(tag("["), space0),
+        separated_list0(parse_spacer, string),
+        preceded(space0, tag("]")),
+    )(input)
+}
+
 pub fn key_value(input: &str) -> IResult<&str, (&str, &str)> {
     separated_pair(
         string,
@@ -53,5 +61,19 @@ pub fn parse_object(input: &str) -> IResult<&str, Param> {
         preceded(space0, tag("}")),
     )(input)?;
     Ok((remainder, Param::Map(pairs)))
+}
+
+pub fn parse_object2(input: &str) -> IResult<&str, Vec<&str>> {
+    let (remainder, pairs) = delimited(
+        terminated(tag("{"), space0),
+        separated_list0(parse_spacer, key_value),
+        preceded(space0, tag("}")),
+    )(input)?;
+
+    let flat = Vec::with_capacity(pairs.len() * 2);
+    let flat = pairs.iter()
+        .fold(flat, |mut acc, p| { acc.extend(&[p.0, p.1]); acc });
+
+    Ok((remainder, flat))
 }
 

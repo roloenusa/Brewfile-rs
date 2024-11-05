@@ -1,16 +1,13 @@
-use std::collections::HashMap;
-
-use nom::{branch::alt, character::complete::alpha1, combinator::value, bytes::complete::tag, sequence::terminated, IResult, Parser};
+use nom::{branch::alt, combinator::value, bytes::complete::tag, sequence::terminated, IResult};
 use nom::character::complete::space0;
 
 use crate::string_parser::string;
-use crate::{is_last, parse_list, parse_object, Param};
-
+use crate::{is_last, parse_list2, parse_object2};
 
 #[derive(Debug, Clone)]
 pub struct BrewCommand<'a> {
     target: String,
-    args: Param<'a>,
+    args: Vec<&'a str>,
     link: LinkOptions,
 }
 
@@ -26,7 +23,7 @@ impl<'a> BrewCommand<'a> {
         // Allocate the structure data
         let mut brew = Self {
             target: String::new(),
-            args: Param::String(""),
+            args: Vec::new(),
             link: LinkOptions::None,
         };
 
@@ -44,7 +41,7 @@ impl<'a> BrewCommand<'a> {
             let (remainder, key) = terminated(alt((tag("args"), tag("link"))), terminated(tag(":"), space0))(result_remainder)?;
             let remainder = match key {
                 "args" => {
-                    let (remainder, value) = alt((parse_object, parse_list))(remainder)?;
+                    let (remainder, value) = alt((parse_list2, parse_object2))(remainder)?;
                     brew.args = value;
                     remainder
                 },
@@ -97,11 +94,11 @@ mod tests {
     #[test]
     fn parse_args() {
         let (remainder, brew) = BrewCommand::parse("\"target\", args: [\"hello\", \"world\"]\n").unwrap();
-        assert_eq!(brew.args, Param::List(vec!["hello", "world"]));
+        assert_eq!(brew.args, vec!["hello", "world"]);
         assert_eq!(remainder, "");
 
         let (remainder, brew) = BrewCommand::parse("\"target\", args: {\"hello\": \"world\"}\n").unwrap();
-        assert_eq!(brew.args, Param::Map(vec![("hello", "world")]));
+        assert_eq!(brew.args, vec!["hello", "world"]);
         assert_eq!(remainder, "");
 
         // Should only accept maps or lists
