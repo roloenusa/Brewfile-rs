@@ -1,9 +1,7 @@
-use nom::sequence::{preceded, tuple};
-use nom::{branch::alt, combinator::value, bytes::complete::tag, sequence::terminated, IResult};
-use nom::character::complete::space0;
+use nom::IResult;
 
 use crate::string_parser::string;
-use crate::{is_last, parse_bool, parse_list2, parse_object2, parse_spacer};
+use crate::is_last;
 
 #[derive(Debug, Clone)]
 pub struct TapCommand<'a> {

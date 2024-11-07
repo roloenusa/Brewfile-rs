@@ -14,27 +14,7 @@ use parsers::*;
 #[derive(Debug)]
 enum Command<'a> {
     Brew(brew_command::BrewCommand<'a>),
-    Tap(Tap<'a>),
-}
-
-#[derive(Debug, Clone, Default)]
-struct Tap<'a> {
-    user_repo: &'a str,
-    url: Option<&'a str>,
-}
-
-fn parse_tap(input: &str) -> IResult<&str, Tap> {
-    let (remainder, user_repo) = string::<()>(input).unwrap();
-    let (remainder, result) = is_last(remainder)?;
-
-    if result {
-        return Ok((remainder, Tap { user_repo, url: None }))
-    }
-
-    let (remainder, url) = string::<()>(remainder).unwrap();
-
-    // Build the object we need to return
-    Ok((remainder, Tap { user_repo, url: Some(url) }))
+    Tap(tap_command::TapCommand<'a>),
 }
 
 fn parse_command(input: &str) -> IResult<&str, Command>{
@@ -47,7 +27,7 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
 
     match command {
         "tap" => {
-            let (remainder, tap) = parse_tap(remainder)?;
+            let (remainder, tap) = tap_command::TapCommand::parse(remainder)?;
             Ok((remainder, Command::Tap(tap)))
         }
         "brew" => {
