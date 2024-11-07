@@ -1,6 +1,7 @@
 mod string_parser;
 mod parsers;
 mod brew_command;
+mod tap_command;
 
 use nom::character::complete::{alphanumeric1, multispace0, space0};
 use nom::multi::many0;

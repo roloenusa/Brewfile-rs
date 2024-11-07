@@ -1,6 +1,7 @@
 use nom::branch::alt;
 use nom::character::complete::{multispace0, space0};
 use nom::bytes::complete::tag;
+use nom::combinator::value;
 use nom::multi::separated_list0;
 use nom::sequence::{delimited, preceded, separated_pair, terminated};
 use nom::IResult;
@@ -22,6 +23,10 @@ pub fn is_last(input: &str) -> IResult<&str, bool> {
         "," => Ok((remainder, false)),
         _ => Ok((remainder, true)),
     }
+}
+
+pub fn parse_bool(input: &str) -> IResult<&str, bool> {
+    alt((value(true, tag("true")), value(false, tag("false"))))(input)
 }
 
 pub fn parse_spacer(input: &str) -> IResult<&str, &str> {

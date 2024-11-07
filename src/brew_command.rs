@@ -6,7 +6,7 @@ use crate::{is_last, parse_list2, parse_object2};
 
 #[derive(Debug, Clone)]
 pub struct BrewCommand<'a> {
-    target: String,
+    pkg: String,
     args: Vec<&'a str>,
     link: LinkOptions,
 }
@@ -22,14 +22,14 @@ impl<'a> BrewCommand<'a> {
     pub fn parse(input: &'a str) -> IResult<&str, Self> {
         // Allocate the structure data
         let mut brew = Self {
-            target: String::new(),
+            pkg: String::new(),
             args: Vec::new(),
             link: LinkOptions::None,
         };
 
         // Get the initial command
-        let (remainder, target) = string::<()>(input).unwrap();
-        brew.target = target.to_string();
+        let (remainder, pkg) = string::<()>(input).unwrap();
+        brew.pkg= pkg.to_string();
 
         // Check if this is the last parameter on the set
         let (remainder, last) = is_last(remainder)?;
@@ -72,17 +72,17 @@ mod tests {
 
     #[test]
     fn parse_line() {
-        let (remainder, brew) = BrewCommand::parse("\"target\" \n").unwrap();
-        assert_eq!(brew.target, "target");
+        let (remainder, brew) = BrewCommand::parse("\"package\" \n").unwrap();
+        assert_eq!(brew.pkg, "package");
         assert_eq!(remainder, "");
 
         // Remainder must be after the line break
-        let (remainder, brew) = BrewCommand::parse("\"target\" \nextra").unwrap();
-        assert_eq!(brew.target, "target");
+        let (remainder, brew) = BrewCommand::parse("\"package\" \nextra").unwrap();
+        assert_eq!(brew.pkg, "package");
         assert_eq!(remainder, "extra");
 
         // Returns an error when following invalid input
-        let res = BrewCommand::parse("\"target\", invalid: true\nextra");
+        let res = BrewCommand::parse("\"package\", invalid: true\nextra");
         match res {
             Err(nom::Err::Error(err)) => {
                 assert_eq!(err.to_string(), "error Tag at: invalid: true\nextra"); // Checking the remaining input
@@ -93,16 +93,16 @@ mod tests {
 
     #[test]
     fn parse_args() {
-        let (remainder, brew) = BrewCommand::parse("\"target\", args: [\"hello\", \"world\"]\n").unwrap();
+        let (remainder, brew) = BrewCommand::parse("\"pkg\", args: [\"hello\", \"world\"]\n").unwrap();
         assert_eq!(brew.args, vec!["hello", "world"]);
         assert_eq!(remainder, "");
 
-        let (remainder, brew) = BrewCommand::parse("\"target\", args: {\"hello\": \"world\"}\n").unwrap();
+        let (remainder, brew) = BrewCommand::parse("\"pkg\", args: {\"hello\": \"world\"}\n").unwrap();
         assert_eq!(brew.args, vec!["hello", "world"]);
         assert_eq!(remainder, "");
 
         // Should only accept maps or lists
-        let res = BrewCommand::parse("\"target\", args: hello\n");
+        let res = BrewCommand::parse("\"pkg\", args: hello\n");
         match res {
             Err(nom::Err::Error(err)) => {
                 assert_eq!(err.to_string(), "error Tag at: hello\n"); // Checking the remaining input
@@ -111,7 +111,7 @@ mod tests {
         }
 
         // Should fail on dangling args
-        let res = BrewCommand::parse("\"target\", args: \n");
+        let res = BrewCommand::parse("\"pkg\", args: \n");
         match res {
             Err(nom::Err::Error(err)) => {
                 assert_eq!(err.to_string(), "error Tag at: \n"); // Checking the remaining input
@@ -122,13 +122,13 @@ mod tests {
 
     #[test]
     fn parse_link() {
-        let (remainder, brew) = BrewCommand::parse("\"target\", link: true \n").unwrap();
-        assert_eq!(brew.target, "target");
+        let (remainder, brew) = BrewCommand::parse("\"package\", link: true \n").unwrap();
+        assert_eq!(brew.pkg, "package");
         assert_eq!(brew.link, LinkOptions::On);
         assert_eq!(remainder, "");
 
-        let (remainder, brew) = BrewCommand::parse("\"target\", link: :override").unwrap();
-        assert_eq!(brew.target, "target");
+        let (remainder, brew) = BrewCommand::parse("\"package\", link: :override").unwrap();
+        assert_eq!(brew.pkg, "package");
         assert_eq!(brew.link, LinkOptions::Override);
         assert_eq!(remainder, "");
     }
