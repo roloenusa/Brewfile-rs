@@ -2,7 +2,7 @@ use nom::{branch::alt, combinator::value, bytes::complete::tag, sequence::termin
 use nom::character::complete::space0;
 
 use crate::string_parser::string;
-use crate::{is_last, parse_list2, parse_object2};
+use crate::{is_last, parse_list, parse_object};
 
 #[derive(Debug, Clone)]
 pub struct BrewCommand<'a> {
@@ -41,7 +41,7 @@ impl<'a> BrewCommand<'a> {
             let (remainder, key) = terminated(alt((tag("args"), tag("link"))), terminated(tag(":"), space0))(result_remainder)?;
             let remainder = match key {
                 "args" => {
-                    let (remainder, value) = alt((parse_list2, parse_object2))(remainder)?;
+                    let (remainder, value) = alt((parse_list, parse_object))(remainder)?;
                     brew.args = value;
                     remainder
                 },
@@ -64,7 +64,6 @@ impl<'a> BrewCommand<'a> {
         Ok((result_remainder, brew))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -132,6 +131,5 @@ mod tests {
         assert_eq!(brew.link, LinkOptions::Override);
         assert_eq!(remainder, "");
     }
-
 }
 

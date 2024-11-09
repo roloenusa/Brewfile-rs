@@ -3,12 +3,11 @@ mod parsers;
 mod brew_command;
 mod tap_command;
 
-use nom::character::complete::{alphanumeric1, multispace0, space0};
+use nom::character::complete::{alpha1, space1};
 use nom::multi::many0;
-use nom::sequence::{delimited, terminated};
+use nom::sequence::terminated;
 use nom::{IResult, Parser};
 
-use string_parser::string;
 use parsers::*;
 
 #[derive(Debug)]
@@ -19,10 +18,7 @@ enum Command<'a> {
 
 fn parse_command(input: &str) -> IResult<&str, Command>{
     // Commands should always be followed by a space
-    let (remainder, command) = terminated(
-        alphanumeric1,
-        space0
-    )
+    let (remainder, command) = terminated(alpha1, space1)
     .parse(input)?;
 
     match command {
@@ -38,18 +34,9 @@ fn parse_command(input: &str) -> IResult<&str, Command>{
     }
 }
 
-fn parse_line(input: &str) -> IResult<&str, Command> {
-    let (remainder, result) = delimited(
-        multispace0,
-        parse_command,
-        multispace0,
-    )(input)?;
-
-    Ok((remainder, result))
-}
 
 fn parse_input(input: &str) -> IResult<&str, Vec<Command>> {
-    many0(parse_line)(input)
+    many0(parse_line(parse_command))(input)
 }
 
 fn main() {
