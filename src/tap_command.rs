@@ -7,6 +7,8 @@ use crate::is_last;
 pub struct TapCommand<'a> {
     pkg: &'a str,
     url: &'a str,
+    pub description: &'a str,
+    pub optional: bool,
 }
 
 impl<'a> TapCommand<'a> {
@@ -15,6 +17,8 @@ impl<'a> TapCommand<'a> {
         let mut brew = Self {
             pkg: "",
             url: "",
+            description: "",
+            optional: false,
         };
 
         // Get the initial command
