@@ -1,10 +1,11 @@
 use nom::branch::alt;
-use nom::bytes::complete::take_until;
-use nom::sequence::{preceded, terminated};
+use nom::sequence::terminated;
 use nom::{bytes::complete::tag, IResult};
 use nom::character::complete::{alpha1, space1};
 
-use crate::{brew_command, tap_command};
+use crate::brew_command;
+use crate::metafield::Metafield;
+use crate::tap_command;
 
 #[derive(Debug)]
 enum Command<'a> {
@@ -20,11 +21,6 @@ pub struct MetaCommand<'a> {
     command: Command<'a>,
 }
 
-#[derive(Debug, Clone)]
-enum Metafield<'a> {
-    Description(&'a str),
-    Optional
-}
 
 fn parse_metacommand(input: &str) -> IResult<&str, MetaCommand> {
 
@@ -56,7 +52,7 @@ fn parse_metacommand(input: &str) -> IResult<&str, MetaCommand> {
                 remainder
             }
             "##" => {
-                let (remainder, metadata) = Metafield::parse_metafields(remainder)?;
+                let (remainder, metadata) = Metafield::parse(remainder)?;
                 match metadata {
                     Metafield::Optional => metacommand.optional = true,
                     Metafield::Description(value) => metacommand.description = value,
@@ -80,26 +76,6 @@ pub fn parse_command(input: &str) -> IResult<&str, Vec<MetaCommand>> {
         commands.push(metacommand);
     };
     Ok((input, commands))
-}
-
-
-impl<'a> Metafield<'a> {
-    fn parse_metafields(input: &'a str) -> IResult<&str, Self> {
-
-        // Check if this is the last parameter on the set
-        let (remainder, key) = preceded(tag("@"), alpha1)(input)?;
-        match key {
-            "description" => {
-                let (remainder, value) = take_until("\n")(remainder)?;
-                Ok((remainder, Metafield::Description(value.trim())))
-            },
-            "optional" => {
-                let (remainder, _) = take_until("\n")(remainder)?;
-                Ok((remainder, Metafield::Optional))
-            },
-            unknown => panic!("Unknown parameter {unknown}"),
-        }
-    }
 }
 
 // #[cfg(test)]

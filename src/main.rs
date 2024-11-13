@@ -3,6 +3,7 @@ mod parsers;
 mod brew_command;
 mod tap_command;
 mod metadata;
+mod metafield;
 
 use metadata::{parse_command, MetaCommand};
 use nom::IResult;
