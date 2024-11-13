@@ -52,6 +52,7 @@ pub fn parse_object(input: &str) -> IResult<&str, Vec<&str>> {
 
 /// A custom parser that takes another parser as a parameter
 /// The parser ensures that the input is surrounded by optional whitespace.
+#[allow(dead_code)]
 pub fn parse_line<'a, O, F>(parser: F) -> impl FnMut(&'a str) -> IResult<&'a str, O>
 where F: FnMut(&'a str) -> IResult<&'a str, O>,
 {

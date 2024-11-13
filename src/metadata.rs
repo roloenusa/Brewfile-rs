@@ -1,46 +1,104 @@
+use nom::branch::alt;
 use nom::bytes::complete::take_until;
-use nom::sequence::preceded;
-use nom::{bytes::complete::tag, sequence::terminated, IResult};
-use nom::character::complete::{alpha1, multispace0, space0, space1};
+use nom::sequence::{preceded, terminated};
+use nom::{bytes::complete::tag, IResult};
+use nom::character::complete::{alpha1, space1};
 
-use crate::is_last;
+use crate::{brew_command, tap_command};
 
-// #[derive(Debug, Clone)]
-// pub struct Metadata<'a> {
-//     description: &'a str,
-//     required: bool,
-// }
+#[derive(Debug)]
+enum Command<'a> {
+    Brew(brew_command::BrewCommand<'a>),
+    Tap(tap_command::TapCommand<'a>),
+    None,
+}
+
+#[derive(Debug)]
+pub struct MetaCommand<'a> {
+    description: &'a str,
+    optional: bool,
+    command: Command<'a>,
+}
 
 #[derive(Debug, Clone)]
-pub enum Metadata<'a> {
+enum Metafield<'a> {
     Description(&'a str),
     Optional
 }
 
-impl<'a> Metadata<'a> {
-    pub fn parse(input: &'a str) -> IResult<&str, Self> {
+fn parse_metacommand(input: &str) -> IResult<&str, MetaCommand> {
+
+    let mut metacommand: MetaCommand = MetaCommand {
+        description: "",
+        optional: false,
+        command: Command::None,
+    };
+
+    let mut res_remainder = input;
+    let mut sentinel = true;
+    while !res_remainder.is_empty() && sentinel {
+        let (remainder, command) = alt((
+            terminated(alpha1, space1),
+            terminated(tag("##"), space1),
+        ))(res_remainder.trim())?;
+
+        res_remainder = match command {
+            "tap" => {
+                let (remainder, tap) = tap_command::TapCommand::parse(remainder)?;
+                metacommand.command = Command::Tap(tap);
+                sentinel = false;
+                remainder
+            }
+            "brew" => {
+                let (remainder, brew) = brew_command::BrewCommand::parse(remainder)?;
+                metacommand.command = Command::Brew(brew);
+                sentinel = false;
+                remainder
+            }
+            "##" => {
+                let (remainder, metadata) = Metafield::parse_metafields(remainder)?;
+                match metadata {
+                    Metafield::Optional => metacommand.optional = true,
+                    Metafield::Description(value) => metacommand.description = value,
+                };
+                remainder
+            }
+            unknown => panic!("Unknown command: {unknown} - {remainder}"),
+        };
+    };
+
+    Ok((res_remainder, metacommand))
+}
+
+pub fn parse_command(input: &str) -> IResult<&str, Vec<MetaCommand>> {
+    let mut input = input.trim();
+
+    let mut commands: Vec<MetaCommand> = Vec::new();
+    while !input.is_empty() {
+        let (remainder, metacommand) = parse_metacommand(input)?;
+        input = remainder;
+        commands.push(metacommand);
+    };
+    Ok((input, commands))
+}
+
+
+impl<'a> Metafield<'a> {
+    fn parse_metafields(input: &'a str) -> IResult<&str, Self> {
 
         // Check if this is the last parameter on the set
         let (remainder, key) = preceded(tag("@"), alpha1)(input)?;
         match key {
             "description" => {
                 let (remainder, value) = take_until("\n")(remainder)?;
-                // metadata.description = value.trim();
-                // remainder
-                Ok((remainder, Metadata::Description(value.trim())))
+                Ok((remainder, Metafield::Description(value.trim())))
             },
             "optional" => {
                 let (remainder, _) = take_until("\n")(remainder)?;
-                // metadata.description = value.trim();
-                // remainder
-                Ok((remainder, Metadata::Optional))
+                Ok((remainder, Metafield::Optional))
             },
             unknown => panic!("Unknown parameter {unknown}"),
         }
-
-        // print!("---- remainder: {}", remainder);
-        //
-        // Ok((remainder, metadata))
     }
 }
 
