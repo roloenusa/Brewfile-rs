@@ -7,8 +7,8 @@ use crate::{is_last, parse_list, parse_object};
 #[derive(Debug, Clone)]
 pub struct BrewCommand<'a> {
     pkg: String,
-    args: Vec<&'a str>,
-    link: LinkOptions,
+    pub args: Vec<&'a str>,
+    pub link: LinkOptions,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -62,6 +62,10 @@ impl<'a> BrewCommand<'a> {
         };
 
         Ok((result_remainder, brew))
+    }
+
+    pub fn pkg(self) -> String {
+        self.pkg
     }
 }
 

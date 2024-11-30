@@ -77,71 +77,77 @@ pub fn parse_command(input: &str) -> IResult<&str, Vec<MetaCommand>> {
     Ok((input, commands))
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn parse_line() {
-//         let (remainder, brew) = BrewCommand::parse("\"package\" \n").unwrap();
-//         assert_eq!(brew.pkg, "package");
-//         assert_eq!(remainder, "");
-//
-//         // Remainder must be after the line break
-//         let (remainder, brew) = BrewCommand::parse("\"package\" \nextra").unwrap();
-//         assert_eq!(brew.pkg, "package");
-//         assert_eq!(remainder, "extra");
-//
-//         // Returns an error when following invalid input
-//         let res = BrewCommand::parse("\"package\", invalid: true\nextra");
-//         match res {
-//             Err(nom::Err::Error(err)) => {
-//                 assert_eq!(err.to_string(), "error Tag at: invalid: true\nextra"); // Checking the remaining input
-//             }
-//             _ => panic!("Expected an error but got: {:?}", res),
-//         }
-//     }
-//
-//     #[test]
-//     fn parse_args() {
-//         let (remainder, brew) = BrewCommand::parse("\"pkg\", args: [\"hello\", \"world\"]\n").unwrap();
-//         assert_eq!(brew.args, vec!["hello", "world"]);
-//         assert_eq!(remainder, "");
-//
-//         let (remainder, brew) = BrewCommand::parse("\"pkg\", args: {\"hello\": \"world\"}\n").unwrap();
-//         assert_eq!(brew.args, vec!["hello", "world"]);
-//         assert_eq!(remainder, "");
-//
-//         // Should only accept maps or lists
-//         let res = BrewCommand::parse("\"pkg\", args: hello\n");
-//         match res {
-//             Err(nom::Err::Error(err)) => {
-//                 assert_eq!(err.to_string(), "error Tag at: hello\n"); // Checking the remaining input
-//             }
-//             _ => panic!("Expected an error but got: {:?}", res),
-//         }
-//
-//         // Should fail on dangling args
-//         let res = BrewCommand::parse("\"pkg\", args: \n");
-//         match res {
-//             Err(nom::Err::Error(err)) => {
-//                 assert_eq!(err.to_string(), "error Tag at: \n"); // Checking the remaining input
-//             }
-//             _ => panic!("Expected an error but got: {:?}", res),
-//         }
-//     }
-//
-//     #[test]
-//     fn parse_link() {
-//         let (remainder, brew) = BrewCommand::parse("\"package\", link: true \n").unwrap();
-//         assert_eq!(brew.pkg, "package");
-//         assert_eq!(brew.link, LinkOptions::On);
-//         assert_eq!(remainder, "");
-//
-//         let (remainder, brew) = BrewCommand::parse("\"package\", link: :override").unwrap();
-//         assert_eq!(brew.pkg, "package");
-//         assert_eq!(brew.link, LinkOptions::Override);
-//         assert_eq!(remainder, "");
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_no_metadata() {
+        let (remainder, brew) = parse_command("brew \"package\" \n").unwrap();
+        assert_eq!(remainder, "");
+        assert_eq!(brew.len(), 1);
+        assert_eq!(brew[0].description, "");
+        assert!(!brew[0].optional);
+        match &brew[0].command {
+            Command::Brew(a) => {
+                assert_eq!(a.clone().pkg(), "package");
+            },
+            _ => panic!("wrong command"),
+        }
+    }
+
+    #[test]
+    fn parse_metadata() {
+        let text = "\
+            ## @description This is a description
+            ## @optional
+            brew \"package\" \n
+        ";
+
+        let (remainder, brew) = parse_command(text).unwrap();
+        assert_eq!(remainder, "");
+        assert_eq!(brew.len(), 1);
+        assert_eq!(brew[0].description, "This is a description");
+        assert!(brew[0].optional);
+        match &brew[0].command {
+            Command::Brew(a) => {
+                assert_eq!(a.clone().pkg(), "package");
+            },
+            _ => panic!("wrong command"),
+        }
+    }
+
+    #[test]
+    fn parse_multi_metadata() {
+        let text = "\
+            ## @description This is a description
+            ## @optional
+            brew \"package\" \n
+
+            ## @description Other description
+            brew \"package2\" \n
+        ";
+
+        let (remainder, brew) = parse_command(text).unwrap();
+        assert_eq!(remainder, "");
+        assert_eq!(brew.len(), 2);
+        assert_eq!(brew[0].description, "This is a description");
+        assert!(brew[0].optional);
+        match &brew[0].command {
+            Command::Brew(a) => {
+                assert_eq!(a.clone().pkg(), "package");
+            },
+            _ => panic!("wrong command"),
+        }
+
+        assert_eq!(brew[1].description, "Other description");
+        assert!(!brew[1].optional);
+        match &brew[1].command {
+            Command::Brew(a) => {
+                assert_eq!(a.clone().pkg(), "package2");
+            },
+            _ => panic!("wrong command"),
+        }
+    }
+}
 

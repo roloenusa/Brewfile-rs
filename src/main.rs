@@ -19,13 +19,13 @@ fn main() {
 
     // println!("{}", src);
 
-    let (remainder, result) = parse_input(&src).unwrap();
+    let (_remainder, result) = parse_input(&src).unwrap();
 
     // println!("remainder: {:#?}", remainder);
 
-    // for command in result {
-    //     println!("{:#?}", command);
-    // }
+    for command in &result {
+        println!("{:#?}", command);
+    }
     let metacommand = &result.last().unwrap();
     match &metacommand.command {
         metadata::Command::Tap(value) => value.install(),
