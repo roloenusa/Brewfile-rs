@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use nom::IResult;
 
 use crate::string_parser::string;
@@ -35,6 +37,16 @@ impl<'a> TapCommand<'a> {
         brew.url = url;
 
         Ok((remainder, brew))
+    }
+
+
+    pub fn install(&self) {
+        let mut command = Command::new("brew");
+        command.arg("echo")
+            .arg(self.pkg)
+            .arg(self.url)
+            .output()
+            .expect("failed to execute process");
     }
 }
 

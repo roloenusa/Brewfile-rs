@@ -8,7 +8,7 @@ use crate::metafield::Metafield;
 use crate::tap_command;
 
 #[derive(Debug)]
-enum Command<'a> {
+pub enum Command<'a> {
     Brew(brew_command::BrewCommand<'a>),
     Tap(tap_command::TapCommand<'a>),
     None,
@@ -18,11 +18,10 @@ enum Command<'a> {
 pub struct MetaCommand<'a> {
     description: &'a str,
     optional: bool,
-    command: Command<'a>,
+    pub command: Command<'a>,
 }
 
-
-fn parse_metacommand(input: &str) -> IResult<&str, MetaCommand> {
+fn parse(input: &str) -> IResult<&str, MetaCommand> {
 
     let mut metacommand: MetaCommand = MetaCommand {
         description: "",
@@ -71,7 +70,7 @@ pub fn parse_command(input: &str) -> IResult<&str, Vec<MetaCommand>> {
 
     let mut commands: Vec<MetaCommand> = Vec::new();
     while !input.is_empty() {
-        let (remainder, metacommand) = parse_metacommand(input)?;
+        let (remainder, metacommand) = parse(input)?;
         input = remainder;
         commands.push(metacommand);
     };

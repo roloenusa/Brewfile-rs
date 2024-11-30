@@ -17,14 +17,19 @@ fn parse_input(input: &str) -> IResult<&str, Vec<MetaCommand>> {
 fn main() {
     let src = std::fs::read_to_string(std::env::args().nth(1).unwrap()).unwrap();
 
-    println!("{}", src);
+    // println!("{}", src);
 
     let (remainder, result) = parse_input(&src).unwrap();
 
-    println!("remainder: {:#?}", remainder);
+    // println!("remainder: {:#?}", remainder);
 
-    for command in result {
-        println!("{:#?}", command);
-    }
+    // for command in result {
+    //     println!("{:#?}", command);
+    // }
+    let metacommand = &result.last().unwrap();
+    match &metacommand.command {
+        metadata::Command::Tap(value) => value.install(),
+        _ => panic!("--- panic"),
+    };
 }
 
