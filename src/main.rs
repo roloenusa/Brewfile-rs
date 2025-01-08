@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate hello_world_derive;
 
-trait HelloWorld {
-    fn hello_world();
-}
+// trait HelloWorld {
+//     fn hello_world();
+// }
 
-#[derive(HelloWorld)]
+#[derive(HelloWorld, Hola, Debug)]
 struct FrenchToast {
     // #[arg]
     test: String,
@@ -13,6 +13,18 @@ struct FrenchToast {
     #[arg]
     val: i32,
 
+}
+
+impl FrenchToast {
+    fn p(&self) {
+        println!("---- p");
+    }
+}
+
+impl FrenchToast {
+    fn t(&self) {
+        println!("---- t");
+    }
 }
 
 // #[derive(HelloWorld)]
@@ -25,5 +37,11 @@ fn main() {
     let mut a = FrenchToast { test: String::from("berries"), val: 12 };
     println!("--- {}", a.val);
     a.getTest();
+
+    let b = FrenchToast::parse();
+    println!("--- {:#?}", b);
+    b.call();
+    b.p();
+    b.t();
 }
 
