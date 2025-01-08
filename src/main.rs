@@ -1,47 +1,31 @@
-#[macro_use]
-extern crate hello_world_derive;
+mod brew_command;
+mod tap_command;
+mod metadata;
+mod metafield;
 
-// trait HelloWorld {
-//     fn hello_world();
-// }
+use metadata::{parse_command, MetaCommand};
+use nom::IResult;
 
-#[derive(HelloWorld, Hola, Debug)]
-struct FrenchToast {
-    // #[arg]
-    test: String,
-
-    #[arg]
-    val: i32,
-
+fn parse_input(input: &str) -> IResult<&str, Vec<MetaCommand>> {
+    parse_command(input)
 }
-
-impl FrenchToast {
-    fn p(&self) {
-        println!("---- p");
-    }
-}
-
-impl FrenchToast {
-    fn t(&self) {
-        println!("---- t");
-    }
-}
-
-// #[derive(HelloWorld)]
-// struct Waffles;
 
 fn main() {
-    // FrenchToast::hello_world();
-    // Waffles::hello_world();
+    let src = std::fs::read_to_string(std::env::args().nth(1).unwrap()).unwrap();
 
-    let mut a = FrenchToast { test: String::from("berries"), val: 12 };
-    println!("--- {}", a.val);
-    a.getTest();
+    // println!("{}", src);
 
-    let b = FrenchToast::parse();
-    println!("--- {:#?}", b);
-    b.call();
-    b.p();
-    b.t();
+    let (_remainder, result) = parse_input(&src).unwrap();
+
+    // println!("remainder: {:#?}", remainder);
+
+    // for command in &result {
+    //     println!("{:#?}", command);
+    // }
+    let metacommand = &result.last().unwrap();
+    match &metacommand.command {
+        metadata::Command::Tap(value) => value.install(),
+        _ => panic!("--- panic"),
+    };
 }
 

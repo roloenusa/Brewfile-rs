@@ -1,8 +1,8 @@
 use nom::{branch::alt, combinator::value, bytes::complete::tag, sequence::terminated, IResult};
 use nom::character::complete::space0;
 
-use crate::string_parser::string;
-use crate::{is_last, parse_list, parse_object};
+use brewfile_parser::string_parser::string;
+use brewfile_parser::parsers::{is_last, parse_list, parse_object};
 
 #[derive(Debug, Clone)]
 pub struct BrewCommand<'a> {

@@ -2,8 +2,9 @@ use std::process::Command;
 
 use nom::IResult;
 
-use crate::string_parser::string;
-use crate::is_last;
+use brewfile_parser::string_parser::string;
+use brewfile_parser::parsers::is_last;
+
 
 #[derive(Debug, Clone)]
 pub struct TapCommand<'a> {
